@@ -74,9 +74,18 @@
         <label>الهامش <span id="marV"></span></label>
         <input type="range" id="mar" min="0" max="15" value="3">
         <div class="check"><input type="checkbox" id="tile"><label for="tile" style="margin:0">تكرار الشعار على كامل الصورة (مائل)</label></div>
-        <div class="check">الصيغة:
-          <select id="fmt"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select>
+        <div class="check">نوع الملف:
+          <select id="fmt"><option value="image/png">PNG – الأوضح (موصى به)</option><option value="image/jpeg">JPG – ملف أصغر</option><option value="image/webp">WebP – ملف أصغر</option></select>
         </div>
+        <div class="check" style="flex-wrap:wrap">جودة الصورة:
+          <select id="scale">
+            <option value="1">عادية (بحجم الصورة الأصلية)</option>
+            <option value="2" selected>عالية – موصى بها (الشعار أوضح)</option>
+            <option value="3">عالية جداً</option>
+            <option value="4">الأعلى (ملف كبير)</option>
+          </select>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">كلما ارتفعت الجودة صار الشعار ورقم الهاتف أوضح، لكن يكبر حجم الملف.</div>
       </div>
 
       <div class="card">
@@ -116,7 +125,7 @@ const store = {
 function loadSettings(){
   try {
     const s = JSON.parse(store.get('wm-settings') || '{}');
-    for (const k of ['size','op','mar','fmt']) if (s[k] != null) $(k).value = s[k];
+    for (const k of ['size','op','mar','fmt','scale']) if (s[k] != null) $(k).value = s[k];
     if (s.tile) $('tile').checked = true;
     if (s.position) position = s.position;
   } catch {}
@@ -124,7 +133,7 @@ function loadSettings(){
 function saveSettings(){
   store.set('wm-settings', JSON.stringify({
     size:$('size').value, op:$('op').value, mar:$('mar').value,
-    fmt:$('fmt').value, tile:$('tile').checked, position
+    fmt:$('fmt').value, scale:$('scale').value, tile:$('tile').checked, position
   }));
 }
 
@@ -322,13 +331,49 @@ async function addImages(files){
 }
 
 /* ---------- الرسم ---------- */
-function draw(c, x, img){
-  c.width = img.naturalWidth; c.height = img.naturalHeight;
-  x.drawImage(img, 0, 0);
-  if (!logo) return;
+// تصغير الشعار على مراحل (كل مرة للنصف تقريباً) للحفاظ على حدة النص والأرقام الصغيرة،
+// لأن التصغير الكبير دفعة واحدة يُنتج حواف مسنّنة وكتابة باهتة
+let scaledCache = { src: null, w: 0, h: 0, canvas: null };
+function scaledLogo(w, h){
+  if (scaledCache.src === logo && scaledCache.w === w && scaledCache.h === h) return scaledCache.canvas;
+  let cur = logo, cw = logo.naturalWidth, ch = logo.naturalHeight;
+  while (cw / 2 > w) {
+    const next = document.createElement('canvas');
+    next.width = Math.ceil(cw / 2); next.height = Math.ceil(ch / 2);
+    const nx = next.getContext('2d');
+    nx.imageSmoothingEnabled = true; nx.imageSmoothingQuality = 'high';
+    nx.drawImage(cur, 0, 0, next.width, next.height);
+    cur = next; cw = next.width; ch = next.height;
+  }
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const ox = out.getContext('2d');
+  ox.imageSmoothingEnabled = true; ox.imageSmoothingQuality = 'high';
+  ox.drawImage(cur, 0, 0, w, h);
+  scaledCache = { src: logo, w, h, canvas: out };
+  return out;
+}
+
+// أقصى أبعاد آمنة للـ canvas (Chrome ≈ 16384 للبعد و≈ 268 مليون بكسل، ونتحفظ هنا)
+const MAX_SIDE = 16000, MAX_PIXELS = 100e6;
+function exportScale(img){
+  const want = +$('scale').value;
+  const limit = Math.min(MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight),
+                         Math.sqrt(MAX_PIXELS / (img.naturalWidth * img.naturalHeight)));
+  return Math.max(1, Math.min(want, limit));
+}
+
+function draw(c, x, img, scale = 1){
+  c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+  x.drawImage(img, 0, 0, c.width, c.height);
+  if (!logo || !logo.naturalWidth || !logo.naturalHeight) return;
 
   const W = c.width, H = c.height;
-  const lw = W * $('size').value / 100, lh = lw * logo.naturalHeight / logo.naturalWidth;
+  const lw = Math.max(1, Math.round(W * $('size').value / 100));
+  const lh = Math.max(1, Math.round(lw * logo.naturalHeight / logo.naturalWidth));
+  const mark = lw < logo.naturalWidth ? scaledLogo(lw, lh) : logo;
+  x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
   const m = Math.min(W, H) * $('mar').value / 100;
   x.globalAlpha = $('op').value / 100;
 
@@ -339,13 +384,13 @@ function draw(c, x, img){
     let row = 0;
     for (let y = -R; y < R; y += gy, row++)
       for (let xx = -R + (row % 2 ? gx/2 : 0); xx < R; xx += gx)
-        x.drawImage(logo, xx, y, lw, lh);
+        x.drawImage(mark, xx, y, lw, lh);
     x.restore();
   } else {
     const [v, h] = [position[0], position[1]];
-    const px = h === 'l' ? m : h === 'c' ? (W - lw)/2 : W - lw - m;
-    const py = v === 't' ? m : v === 'm' ? (H - lh)/2 : H - lh - m;
-    x.drawImage(logo, px, py, lw, lh);
+    const px = Math.round(h === 'l' ? m : h === 'c' ? (W - lw)/2 : W - lw - m);   // أعداد صحيحة تمنع تمويه الحواف
+    const py = Math.round(v === 't' ? m : v === 'm' ? (H - lh)/2 : H - lh - m);
+    x.drawImage(mark, px, py, lw, lh);
   }
   x.globalAlpha = 1;
 }
@@ -379,13 +424,13 @@ function renderThumbs(){
 function exportOne(it){
   return new Promise(res => {
     const c = document.createElement('canvas');
-    draw(c, c.getContext('2d'), it.img);
+    draw(c, c.getContext('2d'), it.img, exportScale(it.img));
     const type = $('fmt').value, ext = { 'image/jpeg':'jpg','image/png':'png','image/webp':'webp' }[type];
     c.toBlob(blob => {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = `${it.name}-watermarked.${ext}`;
       a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); res();
-    }, type, 0.92);
+    }, type, 1);
   });
 }
 $('dl').onclick = () => exportOne(images[current]);
@@ -398,7 +443,7 @@ POS.forEach(p => {
 });
 function markPos(){ [...$('pos').children].forEach(b => b.classList.toggle('on', b.dataset.p === position)); }
 
-['size','op','mar','tile','fmt'].forEach(id => $(id).addEventListener('input', () => { saveSettings(); render(); }));
+['size','op','mar','tile','fmt','scale'].forEach(id => $(id).addEventListener('input', () => { saveSettings(); render(); }));
 
 function wireDrop(zone, input, handler){
   zone.onclick = () => input.click();
