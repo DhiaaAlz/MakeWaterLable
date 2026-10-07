@@ -246,9 +246,9 @@ function renderFolder(){
     const b = document.createElement('button'); b.className = 'btn sec'; b.textContent = label; b.onclick = onClick; box.appendChild(b);
   };
   if (!supportsFolder) add('الحفظ في مجلد يتطلب متصفح Chrome أو Edge. الشعارات تُحفظ داخل المتصفح فقط.');
-  else if (logosDir) add(`✓ تُحفظ الشعارات أيضاً في المجلد: ${logosDir.name}`, 'تغيير المجلد', () => chooseFolder(true));
+  else if (logosDir) add(`✓ تُحفظ نسخة من الشعارات في مجلد logos على جهازك`, 'تغيير المجلد', () => chooseFolder(true));
   else if (pendingDir) add('المجلد المرتبط يحتاج إذنك من جديد في هذه الجلسة.', 'تفعيل مجلد الحفظ', () => chooseFolder(false));
-  else add('لحفظ الشعارات في مجلد: اختر المجلد الأساسي للتطبيق وسيُنشأ بداخله مجلد logos.', 'اختيار المجلد الأساسي', () => chooseFolder(true));
+  else add('اختر أي مجلد على جهازك لحفظ نسخة من الشعارات، وسيُنشأ بداخله مجلد logos. (اختر مجلداً فرعياً، وليس Desktop أو Documents نفسيهما.)', 'اختيار مجلد على جهازي', () => chooseFolder(true));
 }
 
 async function addLogos(files){
