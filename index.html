@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>إضافة شعار مائي</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f4f6fa;--paper:#fff;--ink:#1c2333;--muted:#5b6577;--line:#e4e8f1;--brand:#2454ff;--brand-dark:#173aa8;--brand-soft:#eaf0ff;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Tajawal,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 16px}
+  h1{margin:0 0 4px;font-size:26px}
+  .sub{color:var(--muted);margin:0 0 20px}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:16px}
+  @media(max-width:800px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(20,30,60,.06)}
+  .card h2{font-size:15px;margin:0 0 10px;color:var(--brand-dark)}
+  .card+.card{margin-top:12px}
+  .drop{border:2px dashed #b7c4ee;background:var(--brand-soft);border-radius:12px;padding:18px;text-align:center;cursor:pointer;color:var(--brand-dark);font-weight:500}
+  .drop.over{background:#d7e2ff}
+  .logos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+  .logos:empty{display:none}
+  .lg{position:relative;height:72px;border:2px solid var(--line);border-radius:10px;background:repeating-conic-gradient(#e8ebf3 0 25%,#fff 0 50%) 0 0/12px 12px;cursor:pointer;padding:4px}
+  .lg.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .lg img{width:100%;height:100%;object-fit:contain;display:block}
+  .lg .x{position:absolute;top:-6px;left:-6px;width:20px;height:20px;border-radius:50%;border:0;background:#c62839;color:#fff;font-size:13px;line-height:20px;padding:0;cursor:pointer;display:none}
+  .folder{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);font-size:13px;color:var(--muted)}
+  .folder .btn{margin-top:8px;padding:8px 12px;font-size:13px}
+  .lg:hover .x,.lg:focus-within .x{display:block}
+  label{display:flex;justify-content:space-between;font-size:14px;margin:12px 0 4px;color:var(--muted)}
+  input[type=range]{width:100%;accent-color:var(--brand)}
+  .pos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;direction:ltr;width:150px;margin:6px 0}
+  .pos button{height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer}
+  .pos button.on{background:var(--brand);border-color:var(--brand)}
+  .check{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px}
+  select{font:inherit;padding:6px;border-radius:8px;border:1px solid var(--line)}
+  .btn{font:inherit;font-weight:700;border:0;border-radius:10px;padding:11px 16px;cursor:pointer;background:var(--brand);color:#fff;width:100%}
+  .btn.sec{background:var(--brand-soft);color:var(--brand-dark);margin-top:8px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .stage{display:flex;align-items:center;justify-content:center;min-height:360px;background:repeating-conic-gradient(#eceff6 0 25%,#fff 0 50%) 0 0/20px 20px;border-radius:12px;overflow:hidden}
+  canvas{max-width:100%;max-height:70vh;display:block}
+  .empty{color:var(--muted)}
+  .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .thumbs button{border:2px solid var(--line);border-radius:8px;padding:0;background:#fff;cursor:pointer;overflow:hidden;width:64px;height:64px}
+  .thumbs button.on{border-color:var(--brand)}
+  .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>إضافة شعار مائي</h1>
+  <p class="sub">ارفع صورة أو عدة صور، والشعار يُوضع عليها فوراً. كل شيء يتم داخل المتصفح ولا يُرفع أي شيء لأي خادم.</p>
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h2>1. مكتبة الشعارات (محفوظة في المتصفح)</h2>
+        <div class="logos" id="logos"></div>
+        <div class="drop" id="logoDrop">+ إضافة شعار (PNG شفاف يفضل، ويمكن اختيار عدة ملفات)</div>
+        <input type="file" id="logoFile" accept="image/*" multiple hidden>
+        <div class="folder" id="folderBox"></div>
+      </div>
+
+      <div class="card">
+        <h2>2. الإعدادات</h2>
+        <div>الموضع</div>
+        <div class="pos" id="pos"></div>
+        <label>الحجم <span id="sizeV"></span></label>
+        <input type="range" id="size" min="5" max="80" value="25">
+        <label>الشفافية <span id="opV"></span></label>
+        <input type="range" id="op" min="5" max="100" value="60">
+        <label>الهامش <span id="marV"></span></label>
+        <input type="range" id="mar" min="0" max="15" value="3">
+        <div class="check"><input type="checkbox" id="tile"><label for="tile" style="margin:0">تكرار الشعار على كامل الصورة (مائل)</label></div>
+        <div class="check">الصيغة:
+          <select id="fmt"><option value="image/jpeg">JPG</option><option value="image/png">PNG</option><option value="image/webp">WebP</option></select>
+        </div>
+      </div>
+
+      <div class="card">
+        <button class="btn" id="dl" disabled>تحميل الصورة</button>
+        <button class="btn sec" id="dlAll" disabled>تحميل الكل</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>المعاينة</h2>
+      <div class="stage" id="stage">
+        <div class="empty" id="empty">
+          <div class="drop" id="imgDrop">اسحب الصور هنا أو اضغط للاختيار<br><small>يمكنك أيضاً لصق صورة بـ Ctrl+V</small></div>
+        </div>
+        <canvas id="cv" hidden></canvas>
+      </div>
+      <input type="file" id="imgFile" accept="image/*" multiple hidden>
+      <div class="thumbs" id="thumbs"></div>
+    </div>
+  </div>
+  <footer>أداة داخلية لإضافة الشعار المائي</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const POS = ['tl','tc','tr','ml','mc','mr','bl','bc','br'];
+const images = [];            // { name, img, url }
+let current = 0, logo = null, position = 'br';
+
+/* ---------- الإعدادات المحفوظة ---------- */
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch {} },
+  del(k){ try { localStorage.removeItem(k); } catch {} }
+};
+function loadSettings(){
+  try {
+    const s = JSON.parse(store.get('wm-settings') || '{}');
+    for (const k of ['size','op','mar','fmt']) if (s[k] != null) $(k).value = s[k];
+    if (s.tile) $('tile').checked = true;
+    if (s.position) position = s.position;
+  } catch {}
+}
+function saveSettings(){
+  store.set('wm-settings', JSON.stringify({
+    size:$('size').value, op:$('op').value, mar:$('mar').value,
+    fmt:$('fmt').value, tile:$('tile').checked, position
+  }));
+}
+
+/* ---------- تحميل الملفات ---------- */
+const loadImg = src => new Promise((res, rej) => {
+  const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src;
+});
+
+/* ---------- مكتبة الشعارات (IndexedDB) ---------- */
+const logos = [];             // { id, name, blob, url, img }
+let selectedLogoId = null;
+
+const dbReady = new Promise((res, rej) => {
+  try {
+    const r = indexedDB.open('wm-db', 2);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      if (!d.objectStoreNames.contains('logos')) d.createObjectStore('logos', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  } catch (e) { rej(e); }
+});
+async function dbRun(mode, fn, storeName = 'logos'){
+  const d = await dbReady;
+  return new Promise((res, rej) => {
+    const t = d.transaction(storeName, mode), req = fn(t.objectStore(storeName));
+    t.oncomplete = () => res(req.result); t.onerror = () => rej(t.error);
+  });
+}
+const dbSafe = (mode, fn, storeName) => dbRun(mode, fn, storeName).catch(() => null);   // بدون تخزين يبقى التطبيق شغالاً
+
+async function makeLogoItem(id, name, blob, fileName = null){
+  const url = URL.createObjectURL(blob);
+  try { return { id, name, blob, fileName, url, img: await loadImg(url) }; }
+  catch { URL.revokeObjectURL(url); return null; }
+}
+const persistLogo = item => dbSafe('readwrite', s => s.put({ id: item.id, name: item.name, blob: item.blob, fileName: item.fileName }));
+
+/* ---------- مجلد الحفظ على القرص: <المجلد الأساسي>/logos ---------- */
+const supportsFolder = 'showDirectoryPicker' in window;
+let logosDir = null;          // مجلد logos عند توفر الصلاحية
+let pendingDir = null;        // مجلد محفوظ يحتاج إعادة تفعيل الصلاحية بنقرة من المستخدم
+
+const extOf = blob => (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg').replace('svg+xml', 'svg');
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif|svg|bmp|avif)$/i;
+
+async function uniqueFileName(wanted){
+  const dot = wanted.lastIndexOf('.');
+  const base = dot > 0 ? wanted.slice(0, dot) : wanted, ext = dot > 0 ? wanted.slice(dot) : '';
+  for (let n = 1; ; n++) {
+    const candidate = n === 1 ? wanted : `${base} (${n})${ext}`;
+    try { await logosDir.getFileHandle(candidate); }
+    catch (e) { if (e.name === 'NotFoundError') return candidate; throw e; }
+  }
+}
+
+async function saveToFolder(item, wantedName){
+  if (!logosDir) return;
+  try {
+    const name = await uniqueFileName(wantedName);
+    const w = await (await logosDir.getFileHandle(name, { create: true })).createWritable();
+    await w.write(item.blob); await w.close();
+    item.fileName = name;
+  } catch { console.warn('تعذر حفظ الشعار في المجلد:', wantedName); }
+}
+
+// يدمج المجلد مع المكتبة: ملفات المجلد الجديدة تدخل المكتبة، وشعارات المكتبة غير الموجودة بالمجلد تُكتب فيه
+async function syncFolder(){
+  const known = new Set(logos.map(l => l.fileName));
+  for await (const entry of logosDir.values()) {
+    if (entry.kind !== 'file' || !IMAGE_EXT.test(entry.name) || known.has(entry.name)) continue;
+    const item = await makeLogoItem(crypto.randomUUID(), entry.name.replace(/\.[^.]+$/, ''), await entry.getFile(), entry.name);
+    if (!item) continue;
+    logos.push(item); persistLogo(item);
+  }
+  for (const item of logos.filter(l => !l.fileName)) {
+    await saveToFolder(item, `${item.name}.${extOf(item.blob)}`);
+    persistLogo(item);
+  }
+  selectedLogoId ? renderLogos() : selectLogo(logos[0] ? logos[0].id : null);
+}
+
+async function initFolder(){
+  if (supportsFolder) {
+    const rec = await dbSafe('readonly', s => s.get('dir'), 'meta');
+    if (rec && rec.handle) {
+      try {
+        if (await rec.handle.queryPermission({ mode: 'readwrite' }) === 'granted') { logosDir = rec.handle; await syncFolder(); }
+        else pendingDir = rec.handle;
+      } catch { /* المجلد لم يعد متاحاً */ }
+    }
+  }
+  renderFolder();
+}
+
+async function chooseFolder(forcePick){
+  try {
+    if (pendingDir && !forcePick) {
+      if (await pendingDir.requestPermission({ mode: 'readwrite' }) !== 'granted') return;
+      logosDir = pendingDir;
+    } else {
+      const root = await showDirectoryPicker({ mode: 'readwrite' });
+      logosDir = await root.getDirectoryHandle('logos', { create: true });
+      dbSafe('readwrite', s => s.put({ key: 'dir', handle: logosDir }), 'meta');
+    }
+    pendingDir = null;
+    await syncFolder();
+  } catch (e) { if (e.name !== 'AbortError') alert('تعذر الوصول إلى المجلد'); }
+  renderFolder();
+}
+
+function renderFolder(){
+  const box = $('folderBox'); box.innerHTML = '';
+  const add = (text, label, onClick) => {
+    const p = document.createElement('div'); p.textContent = text; box.appendChild(p);
+    if (!label) return;
+    const b = document.createElement('button'); b.className = 'btn sec'; b.textContent = label; b.onclick = onClick; box.appendChild(b);
+  };
+  if (!supportsFolder) add('الحفظ في مجلد يتطلب متصفح Chrome أو Edge. الشعارات تُحفظ داخل المتصفح فقط.');
+  else if (logosDir) add(`✓ تُحفظ الشعارات أيضاً في المجلد: ${logosDir.name}`, 'تغيير المجلد', () => chooseFolder(true));
+  else if (pendingDir) add('المجلد المرتبط يحتاج إذنك من جديد في هذه الجلسة.', 'تفعيل مجلد الحفظ', () => chooseFolder(false));
+  else add('لحفظ الشعارات في مجلد: اختر المجلد الأساسي للتطبيق وسيُنشأ بداخله مجلد logos.', 'اختيار المجلد الأساسي', () => chooseFolder(true));
+}
+
+async function addLogos(files){
+  let last = null, failed = 0;
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) { failed++; continue; }
+    const item = await makeLogoItem(crypto.randomUUID(), f.name.replace(/\.[^.]+$/, ''), f);
+    if (!item) { failed++; continue; }
+    await saveToFolder(item, f.name);
+    logos.push(item); last = item;
+    persistLogo(item);
+  }
+  if (failed) alert(`تعذر قراءة ${failed} ملف/ملفات كشعار`);
+  last ? selectLogo(last.id) : renderLogos();
+}
+
+function selectLogo(id){
+  const item = logos.find(l => l.id === id);
+  selectedLogoId = item ? id : null;
+  logo = item ? item.img : null;
+  store.set('wm-logo-id', selectedLogoId || '');
+  renderLogos(); render();
+}
+
+function deleteLogo(id){
+  const i = logos.findIndex(l => l.id === id);
+  if (i < 0) return;
+  const removed = logos[i];
+  URL.revokeObjectURL(removed.url);
+  logos.splice(i, 1);
+  dbSafe('readwrite', s => s.delete(id));
+  if (logosDir && removed.fileName) logosDir.removeEntry(removed.fileName).catch(() => {});
+  if (id === selectedLogoId) selectLogo(logos[0] ? logos[0].id : null);
+  else renderLogos();
+}
+
+function renderLogos(){
+  const box = $('logos'); box.innerHTML = '';
+  logos.forEach(l => {
+    const d = document.createElement('div');
+    d.className = 'lg' + (l.id === selectedLogoId ? ' on' : '');
+    d.title = l.name; d.tabIndex = 0; d.setAttribute('role', 'button');
+    d.setAttribute('aria-label', 'اختيار الشعار ' + l.name);
+    d.innerHTML = '<img alt=""><button class="x" title="حذف" aria-label="حذف الشعار">×</button>';
+    d.firstChild.src = l.url;
+    d.onclick = () => selectLogo(l.id);
+    d.onkeydown = e => { if (e.target === d && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selectLogo(l.id); } };
+    d.lastChild.onclick = e => { e.stopPropagation(); if (confirm('حذف هذا الشعار من المكتبة؟')) deleteLogo(l.id); };
+    box.appendChild(d);
+  });
+}
+
+async function loadLogoLibrary(){
+  const rows = (await dbSafe('readonly', s => s.getAll())) || [];
+  for (const r of rows) {
+    const item = await makeLogoItem(r.id, r.name, r.blob, r.fileName || null);
+    item ? logos.push(item) : dbSafe('readwrite', s => s.delete(r.id));   // شعار تالف: يُمسح بصمت
+  }
+  const savedId = store.get('wm-logo-id');
+  selectLogo(logos.some(l => l.id === savedId) ? savedId : (logos[0] ? logos[0].id : null));
+}
+
+async function addImages(files){
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    const url = URL.createObjectURL(f);
+    try { images.push({ name: f.name.replace(/\.[^.]+$/, ''), img: await loadImg(url), url }); }
+    catch { URL.revokeObjectURL(url); }
+  }
+  renderThumbs(); render();
+}
+
+/* ---------- الرسم ---------- */
+function draw(c, x, img){
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  x.drawImage(img, 0, 0);
+  if (!logo) return;
+
+  const W = c.width, H = c.height;
+  const lw = W * $('size').value / 100, lh = lw * logo.naturalHeight / logo.naturalWidth;
+  const m = Math.min(W, H) * $('mar').value / 100;
+  x.globalAlpha = $('op').value / 100;
+
+  if ($('tile').checked) {
+    x.save();
+    x.translate(W/2, H/2); x.rotate(-Math.PI/6);
+    const gx = lw * 1.8, gy = lh * 2.6, R = Math.hypot(W, H) / 2;
+    let row = 0;
+    for (let y = -R; y < R; y += gy, row++)
+      for (let xx = -R + (row % 2 ? gx/2 : 0); xx < R; xx += gx)
+        x.drawImage(logo, xx, y, lw, lh);
+    x.restore();
+  } else {
+    const [v, h] = [position[0], position[1]];
+    const px = h === 'l' ? m : h === 'c' ? (W - lw)/2 : W - lw - m;
+    const py = v === 't' ? m : v === 'm' ? (H - lh)/2 : H - lh - m;
+    x.drawImage(logo, px, py, lw, lh);
+  }
+  x.globalAlpha = 1;
+}
+
+function render(){
+  $('sizeV').textContent = $('size').value + '%';
+  $('opV').textContent = $('op').value + '%';
+  $('marV').textContent = $('mar').value + '%';
+  const has = images.length > 0;
+  $('empty').hidden = has; cv.hidden = !has;
+  $('dl').disabled = !has || !logo;
+  $('dlAll').disabled = images.length < 2 || !logo;
+  if (!has) return;
+  cv.dataset.ready = 1;
+  draw(cv, ctx, images[current].img);
+}
+
+function renderThumbs(){
+  const box = $('thumbs'); box.innerHTML = '';
+  if (images.length < 2) return;
+  images.forEach((it, i) => {
+    const b = document.createElement('button');
+    b.className = i === current ? 'on' : '';
+    b.innerHTML = '<img alt="">'; b.firstChild.src = it.url;
+    b.onclick = () => { current = i; renderThumbs(); render(); };
+    box.appendChild(b);
+  });
+}
+
+/* ---------- التحميل ---------- */
+function exportOne(it){
+  return new Promise(res => {
+    const c = document.createElement('canvas');
+    draw(c, c.getContext('2d'), it.img);
+    const type = $('fmt').value, ext = { 'image/jpeg':'jpg','image/png':'png','image/webp':'webp' }[type];
+    c.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = `${it.name}-watermarked.${ext}`;
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); res();
+    }, type, 0.92);
+  });
+}
+$('dl').onclick = () => exportOne(images[current]);
+$('dlAll').onclick = async () => { for (const it of images) { await exportOne(it); await new Promise(r => setTimeout(r, 300)); } };
+
+/* ---------- ربط الأحداث ---------- */
+POS.forEach(p => {
+  const b = document.createElement('button'); b.dataset.p = p; $('pos').appendChild(b);
+  b.onclick = () => { position = p; markPos(); saveSettings(); render(); };
+});
+function markPos(){ [...$('pos').children].forEach(b => b.classList.toggle('on', b.dataset.p === position)); }
+
+['size','op','mar','tile','fmt'].forEach(id => $(id).addEventListener('input', () => { saveSettings(); render(); }));
+
+function wireDrop(zone, input, handler){
+  zone.onclick = () => input.click();
+  input.onchange = () => { handler([...input.files]); input.value = ''; };
+  zone.ondragover = e => { e.preventDefault(); zone.classList.add('over'); };
+  zone.ondragleave = () => zone.classList.remove('over');
+  zone.ondrop = e => { e.preventDefault(); zone.classList.remove('over'); handler([...e.dataTransfer.files]); };
+}
+wireDrop($('logoDrop'), $('logoFile'), addLogos);
+wireDrop($('imgDrop'), $('imgFile'), addImages);
+// السماح بالسحب على منطقة المعاينة كلها حتى بعد ظهور الصورة
+$('stage').ondragover = e => e.preventDefault();
+$('stage').ondrop = e => { e.preventDefault(); addImages([...e.dataTransfer.files]); };
+document.addEventListener('paste', e => addImages([...e.clipboardData.files]));
+
+/* ---------- البدء ---------- */
+loadSettings(); markPos(); render();
+loadLogoLibrary().then(initFolder);
+</script>
+</body>
+</html>
